@@ -1,0 +1,19 @@
+name: savemystomach
+
+# Runs on Unraid (kiwi). Caddy on VPS proxies savemystomach.keanuc.net → kiwi:8910.
+# Image built by GitHub Actions → GHCR.
+# Komodo Auto Update pulls latest image on push.
+
+services:
+  web:
+    image: ghcr.io/keanucz/savemystomach:latest
+    container_name: savemystomach
+    restart: unless-stopped
+    ports:
+      - "8910:3000"
+    environment:
+      NEO4J_URI: ${SAVEMYSTOMACH_NEO4J_URI}
+      NEO4J_USER: ${SAVEMYSTOMACH_NEO4J_USER}
+      NEO4J_PASSWORD: ${SAVEMYSTOMACH_NEO4J_PASSWORD}
+      KIMCHI_BASE_URL: ${SAVEMYSTOMACH_KIMCHI_BASE_URL}
+      KIMCHI_API_KEY: ${SAVEMYSTOMACH_KIMCHI_API_KEY}
