@@ -23,7 +23,7 @@ LIMIT 5
 export const TRADER_PROFILE_QUERY = `
 MATCH (t:Trader {id: $traderId})
 OPTIONAL MATCH (t)-[:ATTENDS]->(m:Market)
-WITH t, collect(DISTINCT {market: m.name, day: m.day_of_week, town: m.town}) AS circuit
+WITH t, collect(DISTINCT {market: m.name, day: m.day_of_week, town: m.town, lat: m.lat, lng: m.lng}) AS circuit
 OPTIONAL MATCH (t)-[:SUPPLIES]->(p:Product)
 RETURN t.name AS name, t.business AS business,
        circuit,

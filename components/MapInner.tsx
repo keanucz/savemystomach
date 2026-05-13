@@ -1,6 +1,6 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -14,6 +14,7 @@ interface MarkerData {
 interface MapInnerProps {
   center: [number, number];
   markers: MarkerData[];
+  lines?: Array<{ from: [number, number]; to: [number, number] }>;
   zoom?: number;
 }
 
@@ -43,6 +44,7 @@ function createIcon(type: MarkerData["type"]): L.DivIcon {
 export default function MapInner({
   center,
   markers,
+  lines = [],
   zoom = 14,
 }: MapInnerProps) {
   return (
@@ -56,6 +58,13 @@ export default function MapInner({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {lines.map((line, i) => (
+          <Polyline
+            key={`line-${i}`}
+            positions={[line.from, line.to]}
+            pathOptions={{ color: "#6b7280", weight: 2, dashArray: "6 4", opacity: 0.7 }}
+          />
+        ))}
         {markers.map((marker) => (
           <Marker
             key={`${marker.lat}-${marker.lng}-${marker.label}`}

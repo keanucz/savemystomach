@@ -1,7 +1,8 @@
 import OpenAI from 'openai';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 export const llm = new OpenAI({
-  baseURL: process.env.KIMCHI_BASE_URL || 'https://api.kimchi.dev/v1',
+  baseURL: process.env.KIMCHI_BASE_URL || 'https://api.openai.com/v1',
   apiKey: process.env.KIMCHI_API_KEY || 'placeholder',
 });
 
@@ -37,20 +38,34 @@ export async function recogniseStock(
   return JSON.parse(response.choices[0].message.content || '{"items":[]}');
 }
 
+interface ChatMsg {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export async function traderAssistant(
   question: string,
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
+  history: ChatMsg[] = []
 ): Promise<string> {
+  const messages: ChatCompletionMessageParam[] = [
+    {
+      role: 'system',
+      content: `You are SaveMyStomach's trader assistant. You help market traders understand demand in food desert areas and plan profitable infill stops along their weekly market circuit.
+
+The trader's current data:
+${JSON.stringify(context, null, 2)}
+
+Be concise, practical, friendly. Use British English. Reference specific numbers from the data. If asked about orders, use the pending_orders data which shows exactly what products residents have ordered, broken down by area.`,
+    },
+    ...history.map((m) => ({ role: m.role, content: m.content }) as ChatCompletionMessageParam),
+    { role: 'user', content: question },
+  ];
+
   const response = await llm.chat.completions.create({
     model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'system',
-        content: `You are SaveMyStomach's trader assistant. You help market traders identify profitable food desert infill stops along their weekly market circuit. The trader's current context: ${JSON.stringify(context)}. Be concise, practical, friendly. Use British English. Don't make up numbers — if you don't have data, say so.`,
-      },
-      { role: 'user', content: question },
-    ],
-    max_tokens: 250,
+    messages,
+    max_tokens: 400,
   });
   return response.choices[0].message.content || '';
 }

@@ -20,6 +20,8 @@ interface CircuitStop {
   market: string;
   day: string;
   town: string;
+  lat: number;
+  lng: number;
 }
 
 interface Product {
@@ -111,14 +113,19 @@ export default function TraderPage() {
     async (question: string) => {
       if (!question.trim()) return;
       const userMsg: ChatMessage = { role: 'user', content: question };
-      setMessages((prev) => [...prev, userMsg]);
+      const updatedMessages = [...messages, userMsg];
+      setMessages(updatedMessages);
       setChatInput('');
       setChatLoading(true);
       try {
         const res = await fetch('/api/trader/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question, traderId: TRADER_ID }),
+          body: JSON.stringify({
+            question,
+            traderId: TRADER_ID,
+            history: updatedMessages,
+          }),
         });
         const data: { response: string } = await res.json();
         setMessages((prev) => [
@@ -137,7 +144,7 @@ export default function TraderPage() {
         setChatLoading(false);
       }
     },
-    []
+    [messages]
   );
 
   if (!profile) {
@@ -148,19 +155,29 @@ export default function TraderPage() {
     );
   }
 
-  const mapMarkers = stops.map((s) => ({
+  const marketMarkers = profile.circuit
+    .filter((c) => c.lat && c.lng)
+    .map((c) => ({
+      lat: c.lat,
+      lng: c.lng,
+      label: c.market,
+      type: 'market' as const,
+    }));
+
+  const stopMarkers = stops.map((s) => ({
     lat: s.lat,
     lng: s.lng,
     label: `${s.lsoa_name} — £${s.demand_gbp}`,
     type: 'stop' as const,
   }));
 
-  const circuitMarkers = profile.circuit.map((c) => ({
-    lat: 0,
-    lng: 0,
-    label: c.market,
-    type: 'market' as const,
-  }));
+  const mapMarkers = [...marketMarkers, ...stopMarkers];
+
+  const mapLines = stops.flatMap((s) => {
+    const nearest = marketMarkers.length > 0 ? marketMarkers[0] : null;
+    if (!nearest) return [];
+    return [{ from: [nearest.lat, nearest.lng] as [number, number], to: [s.lat, s.lng] as [number, number] }];
+  });
 
   return (
     <main className="flex flex-1 flex-col items-center px-4 py-6 sm:py-10">
@@ -183,11 +200,14 @@ export default function TraderPage() {
         </Card>
 
         {/* Map */}
-        {stops.length > 0 && (
+        {mapMarkers.length > 0 && (
           <Map
-            center={[stops[0].lat, stops[0].lng]}
+            center={marketMarkers.length > 0
+              ? [marketMarkers[0].lat, marketMarkers[0].lng]
+              : [stops[0].lat, stops[0].lng]}
             markers={mapMarkers}
-            zoom={10}
+            lines={mapLines}
+            zoom={7}
           />
         )}
 
