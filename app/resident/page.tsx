@@ -44,12 +44,13 @@ type ViewState =
   | { step: "postcode" }
   | { step: "stops"; data: LookupResult }
   | { step: "order"; data: LookupResult; stop: TraderStop }
-  | {
+      | {
       step: "confirmed";
       stop: TraderStop;
       items: Record<string, number>;
       orderId: string;
       orderDemo?: boolean;
+      orderDemoReason?: string;
     };
 
 function formatPrice(pence: number): string {
@@ -146,8 +147,12 @@ export default function ResidentPage() {
           items,
         }),
       });
-      const result: { order_id?: string; error?: string; demo?: boolean } =
-        await res.json();
+      const result: {
+        order_id?: string;
+        error?: string;
+        demo?: boolean;
+        demo_reason?: string;
+      } = await res.json();
       if (!res.ok || result.error || !result.order_id) {
         setOrderError(
           typeof result.error === "string"
@@ -162,6 +167,10 @@ export default function ResidentPage() {
         items: quantities,
         orderId: result.order_id,
         orderDemo: result.demo === true,
+        orderDemoReason:
+          typeof result.demo_reason === "string"
+            ? result.demo_reason
+            : undefined,
       });
     } finally {
       setLoading(false);
@@ -366,7 +375,8 @@ export default function ResidentPage() {
                   Order ID: {view.orderId}
                   {view.orderDemo && (
                     <span className="mt-1 block text-amber-700 dark:text-amber-400">
-                      Demo order (not saved to the live database).
+                      {view.orderDemoReason ??
+                        "This confirmation was not saved to the live database (demo fallback)."}
                     </span>
                   )}
                 </CardDescription>

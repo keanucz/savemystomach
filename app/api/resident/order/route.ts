@@ -1,5 +1,6 @@
-import { query } from '@/lib/neo4j';
+import { query, toFiniteNumber } from '@/lib/neo4j';
 import { PLACE_ORDER_MUTATION } from '@/lib/cypher';
+import { compactUkPostcode } from '@/lib/postcode';
 import { isDemoFallbackAllowed } from '@/lib/demo-fallback';
 import { logApiEvent, truncateId } from '@/lib/api-log';
 
@@ -43,10 +44,42 @@ export async function POST(req: Request) {
         ? body.postcode.trim().toUpperCase()
         : 'E2 6BG';
 
-    await query(PLACE_ORDER_MUTATION, {
-      postcode,
-      items,
-    });
+    const lsoaCode =
+      typeof body.lsoa_code === 'string' && body.lsoa_code.trim()
+        ? body.lsoa_code.trim()
+        : '';
+    if (!traderId?.trim()) {
+      return Response.json(
+        { error: 'trader_id is required so demand is attributed to the correct trader' },
+        { status: 400 }
+      );
+    }
+    if (!lsoaCode) {
+      return Response.json(
+        { error: 'lsoa_code is required and must match your area' },
+        { status: 400 }
+      );
+    }
+
+    const rows = await query<{ items_ordered?: unknown }>(
+      PLACE_ORDER_MUTATION,
+      {
+        traderId: traderId.trim(),
+        postcodeCompact: compactUkPostcode(postcode),
+        lsoaCode,
+        items,
+      }
+    );
+    const ordered = toFiniteNumber(rows[0]?.items_ordered, 0);
+    if (ordered !== items.length) {
+      return Response.json(
+        {
+          error:
+            "Could not place order: check postcode and area match this trader's stop, and every item is in stock for this trader.",
+        },
+        { status: 400 }
+      );
+    }
 
     return Response.json({
       order_id: 'ord_' + Date.now(),
@@ -72,6 +105,8 @@ export async function POST(req: Request) {
       order_id: 'ord_demo_' + Date.now(),
       status: 'confirmed',
       demo: true,
+      demo_reason:
+        'Neo4j could not save this order (check NEO4J_URI / credentials).',
     });
   }
 }

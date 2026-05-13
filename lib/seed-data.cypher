@@ -92,62 +92,62 @@ MATCH (l:LSOA {code: 'E01017482'}) CREATE (:Resident {id: 'res_012', postcode: '
 // Orders - Tower Hamlets ~340 total
 // res_001: tomato x4 (1120p), spinach x3 (540p), apple x2 (700p), potato x3 (600p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_001'}), (p:Product {sku: 'tomato'}) CREATE (r)-[:ORDERED {qty: 4, price_pence: 280, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_001'}), (p:Product {sku: 'tomato'}) CREATE (r)-[:ORDERED {qty: 4, price_pence: 280, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_001'}), (p:Product {sku: 'spinach'}) CREATE (r)-[:ORDERED {qty: 3, price_pence: 180, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_001'}), (p:Product {sku: 'spinach'}) CREATE (r)-[:ORDERED {qty: 3, price_pence: 180, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_001'}), (p:Product {sku: 'apple'}) CREATE (r)-[:ORDERED {qty: 2, price_pence: 350, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_001'}), (p:Product {sku: 'apple'}) CREATE (r)-[:ORDERED {qty: 2, price_pence: 350, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_001'}), (p:Product {sku: 'potato'}) CREATE (r)-[:ORDERED {qty: 3, price_pence: 200, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_001'}), (p:Product {sku: 'potato'}) CREATE (r)-[:ORDERED {qty: 3, price_pence: 200, status: 'pending', trader_id: 'trader_001'}]->(p)
 
 // res_002: tomato x5 (1400p), spinach x4 (720p), carrot x5 (750p), potato x4 (800p), apple x3 (1050p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_002'}), (p:Product {sku: 'tomato'}) CREATE (r)-[:ORDERED {qty: 5, price_pence: 280, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_002'}), (p:Product {sku: 'tomato'}) CREATE (r)-[:ORDERED {qty: 5, price_pence: 280, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_002'}), (p:Product {sku: 'spinach'}) CREATE (r)-[:ORDERED {qty: 4, price_pence: 180, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_002'}), (p:Product {sku: 'spinach'}) CREATE (r)-[:ORDERED {qty: 4, price_pence: 180, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_002'}), (p:Product {sku: 'carrot'}) CREATE (r)-[:ORDERED {qty: 5, price_pence: 150, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_002'}), (p:Product {sku: 'carrot'}) CREATE (r)-[:ORDERED {qty: 5, price_pence: 150, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_002'}), (p:Product {sku: 'potato'}) CREATE (r)-[:ORDERED {qty: 4, price_pence: 200, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_002'}), (p:Product {sku: 'potato'}) CREATE (r)-[:ORDERED {qty: 4, price_pence: 200, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_002'}), (p:Product {sku: 'apple'}) CREATE (r)-[:ORDERED {qty: 3, price_pence: 350, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_002'}), (p:Product {sku: 'apple'}) CREATE (r)-[:ORDERED {qty: 3, price_pence: 350, status: 'pending', trader_id: 'trader_001'}]->(p)
 
 // res_003: tomato x6 (1680p), spinach x5 (900p), apple x4 (1400p), potato x5 (1000p), carrot x6 (900p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_003'}), (p:Product {sku: 'tomato'}) CREATE (r)-[:ORDERED {qty: 6, price_pence: 280, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_003'}), (p:Product {sku: 'tomato'}) CREATE (r)-[:ORDERED {qty: 6, price_pence: 280, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_003'}), (p:Product {sku: 'spinach'}) CREATE (r)-[:ORDERED {qty: 5, price_pence: 180, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_003'}), (p:Product {sku: 'spinach'}) CREATE (r)-[:ORDERED {qty: 5, price_pence: 180, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_003'}), (p:Product {sku: 'apple'}) CREATE (r)-[:ORDERED {qty: 4, price_pence: 350, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_003'}), (p:Product {sku: 'apple'}) CREATE (r)-[:ORDERED {qty: 4, price_pence: 350, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_003'}), (p:Product {sku: 'potato'}) CREATE (r)-[:ORDERED {qty: 5, price_pence: 200, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_003'}), (p:Product {sku: 'potato'}) CREATE (r)-[:ORDERED {qty: 5, price_pence: 200, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_003'}), (p:Product {sku: 'carrot'}) CREATE (r)-[:ORDERED {qty: 6, price_pence: 150, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_003'}), (p:Product {sku: 'carrot'}) CREATE (r)-[:ORDERED {qty: 6, price_pence: 150, status: 'pending', trader_id: 'trader_001'}]->(p)
 
 // Orders - Hackney ~180 (res_005 in E01001755)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_005'}), (p:Product {sku: 'tomato'}) CREATE (r)-[:ORDERED {qty: 8, price_pence: 280, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_005'}), (p:Product {sku: 'tomato'}) CREATE (r)-[:ORDERED {qty: 8, price_pence: 280, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_005'}), (p:Product {sku: 'spinach'}) CREATE (r)-[:ORDERED {qty: 6, price_pence: 180, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_005'}), (p:Product {sku: 'spinach'}) CREATE (r)-[:ORDERED {qty: 6, price_pence: 180, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_005'}), (p:Product {sku: 'carrot'}) CREATE (r)-[:ORDERED {qty: 8, price_pence: 150, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_005'}), (p:Product {sku: 'carrot'}) CREATE (r)-[:ORDERED {qty: 8, price_pence: 150, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_005'}), (p:Product {sku: 'potato'}) CREATE (r)-[:ORDERED {qty: 6, price_pence: 200, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_005'}), (p:Product {sku: 'potato'}) CREATE (r)-[:ORDERED {qty: 6, price_pence: 200, status: 'pending', trader_id: 'trader_001'}]->(p)
 
 // Orders - Banbury ~220 (res_008 in E01028557)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_008'}), (p:Product {sku: 'tomato'}) CREATE (r)-[:ORDERED {qty: 10, price_pence: 280, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_008'}), (p:Product {sku: 'tomato'}) CREATE (r)-[:ORDERED {qty: 10, price_pence: 280, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_008'}), (p:Product {sku: 'apple'}) CREATE (r)-[:ORDERED {qty: 8, price_pence: 350, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_008'}), (p:Product {sku: 'apple'}) CREATE (r)-[:ORDERED {qty: 8, price_pence: 350, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_008'}), (p:Product {sku: 'potato'}) CREATE (r)-[:ORDERED {qty: 10, price_pence: 200, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_008'}), (p:Product {sku: 'potato'}) CREATE (r)-[:ORDERED {qty: 10, price_pence: 200, status: 'pending', trader_id: 'trader_001'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_008'}), (p:Product {sku: 'carrot'}) CREATE (r)-[:ORDERED {qty: 10, price_pence: 150, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_008'}), (p:Product {sku: 'carrot'}) CREATE (r)-[:ORDERED {qty: 10, price_pence: 150, status: 'pending', trader_id: 'trader_001'}]->(p)
 
 // Orders - Birmingham ~95 (res_010 in E01008881)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_010'}), (p:Product {sku: 'bread'}) CREATE (r)-[:ORDERED {qty: 8, price_pence: 350, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_010'}), (p:Product {sku: 'bread'}) CREATE (r)-[:ORDERED {qty: 8, price_pence: 350, status: 'pending', trader_id: 'trader_003'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_010'}), (p:Product {sku: 'milk'}) CREATE (r)-[:ORDERED {qty: 10, price_pence: 120, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_010'}), (p:Product {sku: 'milk'}) CREATE (r)-[:ORDERED {qty: 10, price_pence: 120, status: 'pending', trader_id: 'trader_003'}]->(p)
 WITH 1 AS dummy
-MATCH (r:Resident {id: 'res_010'}), (p:Product {sku: 'eggs'}) CREATE (r)-[:ORDERED {qty: 3, price_pence: 300, status: 'pending'}]->(p)
+MATCH (r:Resident {id: 'res_010'}), (p:Product {sku: 'eggs'}) CREATE (r)-[:ORDERED {qty: 3, price_pence: 300, status: 'pending', trader_id: 'trader_003'}]->(p)

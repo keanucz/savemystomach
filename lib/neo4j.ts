@@ -135,6 +135,22 @@ function recordToObject<T = Record<string, unknown>>(r: {
   return obj as T;
 }
 
+/** Coerce Neo4j Integer / string counts to a finite number (safe for `RETURN count(*)` etc.). */
+export function toFiniteNumber(value: unknown, fallback = 0): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'bigint') return Number(value);
+  if (typeof value === 'string') {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+  if (isInt(value)) {
+    return integer.inSafeRange(value as Integer)
+      ? integer.toNumber(value as Integer)
+      : fallback;
+  }
+  return fallback;
+}
+
 export async function query<T = Record<string, unknown>>(
   cypher: string,
   params: Record<string, unknown> = {}

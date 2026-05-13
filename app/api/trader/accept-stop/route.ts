@@ -1,5 +1,8 @@
 import { query } from '@/lib/neo4j';
-import { ACCEPT_STOP_MUTATION } from '@/lib/cypher';
+import {
+  ACCEPT_STOP_MUTATION,
+  CONFIRM_STOP_ORDERS_MUTATION,
+} from '@/lib/cypher';
 import { isDemoFallbackAllowed } from '@/lib/demo-fallback';
 import { logApiEvent, truncateId } from '@/lib/api-log';
 
@@ -35,7 +38,25 @@ export async function POST(req: Request) {
       scheduledTime,
       expectedValuePence,
     });
-    return Response.json(results[0]);
+    if (!results[0]) {
+      return Response.json(
+        { error: 'Trader or area not found, or stop could not be saved.' },
+        { status: 404 }
+      );
+    }
+
+    const confirmRows = await query<{ orders_confirmed?: unknown }>(
+      CONFIRM_STOP_ORDERS_MUTATION,
+      { traderId, lsoaCode }
+    );
+    const raw = confirmRows[0]?.orders_confirmed;
+    const ordersConfirmed =
+      typeof raw === 'number' ? raw : raw != null ? Number(raw) : 0;
+
+    return Response.json({
+      ...results[0],
+      orders_confirmed: ordersConfirmed,
+    });
   } catch (err) {
     const duration_ms = Math.round(performance.now() - started);
     logApiEvent('error', ROUTE, 'accept stop failed', {

@@ -145,6 +145,41 @@ export default function TraderPage() {
     }
   }, []);
 
+  const refreshInfill = useCallback(async () => {
+    if (!profile) return;
+    try {
+      const infillRes = await fetch(
+        `/api/trader/infill?traderId=${TRADER_ID}`
+      );
+      const infillRaw: unknown = await infillRes.json();
+      if (infillRes.ok && Array.isArray(infillRaw)) {
+        setStops(infillRaw as InfillStop[]);
+        setInfillBanner(null);
+      } else if (!infillRes.ok) {
+        const msg =
+          isRecord(infillRaw) && typeof infillRaw.error === 'string'
+            ? infillRaw.error
+            : 'Could not refresh route suggestions.';
+        setInfillBanner(msg);
+      }
+    } catch {
+      /* ignore background refresh errors */
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profile) return;
+    const id = window.setInterval(() => void refreshInfill(), 25000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void refreshInfill();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [profile, refreshInfill]);
+
   useEffect(() => {
     void loadDashboard();
   }, [loadDashboard]);
@@ -166,6 +201,7 @@ export default function TraderPage() {
       if (res.ok) {
         setAcceptedStops((prev) => new Set([...prev, stop.lsoa_code]));
         toast.success(`Stop confirmed: ${stop.lsoa_name}`);
+        void refreshInfill();
       } else {
         let msg = 'Could not confirm stop.';
         try {
@@ -181,7 +217,7 @@ export default function TraderPage() {
     } finally {
       setAcceptingStop(null);
     }
-  }, []);
+  }, [refreshInfill]);
 
   const handleStockUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -315,6 +351,10 @@ export default function TraderPage() {
         <h2 className="mb-3 text-lg font-semibold">
           Profitable detours along your route
         </h2>
+        <p className="mb-2 text-xs text-muted-foreground">
+          Only areas with over £50 in pending orders for your stall appear here.
+          Demand updates about every 25 seconds, or when you return to this tab.
+        </p>
         {infillBanner ? (
           <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
             {infillBanner}

@@ -2,6 +2,7 @@ import { query } from '@/lib/neo4j';
 import { RESIDENT_LOOKUP_QUERY } from '@/lib/cypher';
 import { isDemoFallbackAllowed } from '@/lib/demo-fallback';
 import { logApiEvent } from '@/lib/api-log';
+import { compactUkPostcode } from '@/lib/postcode';
 
 const ROUTE = 'POST /api/resident/lookup';
 
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
     }
 
     const results = await query(RESIDENT_LOOKUP_QUERY, {
-      postcode,
+      postcodeCompact: compactUkPostcode(postcode),
     });
     if (results.length === 0) {
       return Response.json(
