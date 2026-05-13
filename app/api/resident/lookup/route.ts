@@ -1,12 +1,29 @@
 import { query } from '@/lib/neo4j';
 import { RESIDENT_LOOKUP_QUERY } from '@/lib/cypher';
+import { isDemoFallbackAllowed } from '@/lib/demo-fallback';
+import { logApiEvent } from '@/lib/api-log';
+
+const ROUTE = 'POST /api/resident/lookup';
+
+function redactPostcode(pc: string): string {
+  const p = pc.trim().toUpperCase().replace(/\s+/g, '');
+  if (p.length <= 3) return '…';
+  return p.slice(0, 3) + '…';
+}
 
 export async function POST(req: Request) {
-  const { postcode } = await req.json();
-
+  const started = performance.now();
+  let postcode = '';
   try {
+    const body = await req.json();
+    postcode =
+      typeof body.postcode === 'string' ? body.postcode.trim().toUpperCase() : '';
+    if (!postcode) {
+      return Response.json({ error: 'postcode is required' }, { status: 400 });
+    }
+
     const results = await query(RESIDENT_LOOKUP_QUERY, {
-      postcode: postcode.trim().toUpperCase(),
+      postcode,
     });
     if (results.length === 0) {
       return Response.json(
@@ -15,7 +32,22 @@ export async function POST(req: Request) {
       );
     }
     return Response.json(results[0]);
-  } catch {
+  } catch (err) {
+    const duration_ms = Math.round(performance.now() - started);
+    logApiEvent('error', ROUTE, 'lookup failed', {
+      duration_ms,
+      postcode_area: postcode ? redactPostcode(postcode) : undefined,
+      error_name: err instanceof Error ? err.name : 'Error',
+      error_message: err instanceof Error ? err.message : String(err),
+    });
+
+    if (!isDemoFallbackAllowed()) {
+      return Response.json(
+        { error: 'Service temporarily unavailable' },
+        { status: 503 }
+      );
+    }
+
     return Response.json({
       lsoa_code: 'E01004297',
       lsoa_name: 'Tower Hamlets 026A',
@@ -48,6 +80,7 @@ export async function POST(req: Request) {
           ],
         },
       ],
+      demo: true,
     });
   }
 }

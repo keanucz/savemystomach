@@ -64,6 +64,15 @@ function formatDay(day: string): string {
   return day.charAt(0).toUpperCase() + day.slice(1, 3);
 }
 
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return x !== null && typeof x === 'object';
+}
+
+function isTraderProfile(x: unknown): x is TraderProfile {
+  if (!isRecord(x)) return false;
+  return typeof x.name === 'string' && Array.isArray(x.circuit);
+}
+
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -82,6 +91,10 @@ export default function TraderPage() {
   const [acceptedStops, setAcceptedStops] = useState<Set<string>>(new Set());
   const [acceptingStop, setAcceptingStop] = useState<string | null>(null);
 
+  const [initializing, setInitializing] = useState(true);
+  const [bootError, setBootError] = useState<string | null>(null);
+  const [infillBanner, setInfillBanner] = useState<string | null>(null);
+
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
   const [stockLoading, setStockLoading] = useState(false);
 
@@ -89,19 +102,52 @@ export default function TraderPage() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
 
-  useEffect(() => {
-    async function loadData() {
+  const loadDashboard = useCallback(async () => {
+    setInitializing(true);
+    setBootError(null);
+    setInfillBanner(null);
+    try {
       const [profileRes, infillRes] = await Promise.all([
         fetch(`/api/trader/profile?traderId=${TRADER_ID}`),
         fetch(`/api/trader/infill?traderId=${TRADER_ID}`),
       ]);
-      const profileData: TraderProfile = await profileRes.json();
-      const infillData: InfillStop[] = await infillRes.json();
-      setProfile(profileData);
-      setStops(infillData);
+      const profileRaw: unknown = await profileRes.json();
+      const infillRaw: unknown = await infillRes.json();
+
+      if (!profileRes.ok || !isTraderProfile(profileRaw)) {
+        const msg =
+          isRecord(profileRaw) && typeof profileRaw.error === 'string'
+            ? profileRaw.error
+            : 'Could not load trader profile.';
+        setBootError(msg);
+        setProfile(null);
+        setStops([]);
+        return;
+      }
+      setProfile(profileRaw);
+
+      if (!infillRes.ok || !Array.isArray(infillRaw)) {
+        const msg =
+          isRecord(infillRaw) && typeof infillRaw.error === 'string'
+            ? infillRaw.error
+            : 'Could not load route suggestions.';
+        setInfillBanner(msg);
+        setStops([]);
+      } else {
+        setStops(infillRaw as InfillStop[]);
+      }
+    } catch {
+      setBootError('Network error loading dashboard.');
+      setProfile(null);
+      setStops([]);
+    } finally {
+      setInitializing(false);
     }
-    loadData();
   }, []);
+
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
 
   const handleAcceptStop = useCallback(async (stop: InfillStop) => {
     setAcceptingStop(stop.lsoa_code);
@@ -120,6 +166,15 @@ export default function TraderPage() {
       if (res.ok) {
         setAcceptedStops((prev) => new Set([...prev, stop.lsoa_code]));
         toast.success(`Stop confirmed: ${stop.lsoa_name}`);
+      } else {
+        let msg = 'Could not confirm stop.';
+        try {
+          const body: unknown = await res.json();
+          if (isRecord(body) && typeof body.error === 'string') msg = body.error;
+        } catch {
+          /* ignore */
+        }
+        toast.error(msg);
       }
     } catch {
       toast.error('Failed to accept stop. Please try again.');
@@ -141,9 +196,18 @@ export default function TraderPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: base64 }),
         });
-        const data: { items: StockItem[] } = await res.json();
-        setStockItems(data.items);
-        toast.success(`Identified ${data.items.length} items`);
+        const data: unknown = await res.json();
+        if (!res.ok) {
+          const msg =
+            isRecord(data) && typeof data.error === 'string'
+              ? data.error
+              : 'Stock recognition failed.';
+          toast.error(msg);
+          return;
+        }
+        const items = isRecord(data) && Array.isArray(data.items) ? data.items : [];
+        setStockItems(items as StockItem[]);
+        toast.success(`Identified ${items.length} items`);
       } catch {
         toast.error('Failed to recognise stock. Please try again.');
       } finally {
@@ -166,10 +230,25 @@ export default function TraderPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question, traderId: TRADER_ID }),
         });
-        const data: { response: string } = await res.json();
+        const data: unknown = await res.json();
+        if (!res.ok) {
+          const msg =
+            isRecord(data) && typeof data.error === 'string'
+              ? data.error
+              : 'Assistant unavailable.';
+          setMessages((prev) => [
+            ...prev,
+            { role: 'assistant', content: msg },
+          ]);
+          return;
+        }
+        const reply =
+          isRecord(data) && typeof data.response === 'string'
+            ? data.response
+            : 'No response from assistant.';
         setMessages((prev) => [
           ...prev,
-          { role: 'assistant', content: data.response },
+          { role: 'assistant', content: reply },
         ]);
       } catch {
         setMessages((prev) => [
@@ -186,10 +265,28 @@ export default function TraderPage() {
     []
   );
 
-  if (!profile) {
+  if (initializing) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p className="text-muted-foreground">Loading trader dashboard...</p>
+      </div>
+    );
+  }
+
+  if (bootError || !profile) {
+    return (
+      <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 p-4">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Dashboard unavailable</CardTitle>
+            <CardDescription>{bootError ?? 'Trader profile could not be loaded.'}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button className="w-full" onClick={() => void loadDashboard()}>
+              Try again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -218,6 +315,11 @@ export default function TraderPage() {
         <h2 className="mb-3 text-lg font-semibold">
           Profitable detours along your route
         </h2>
+        {infillBanner ? (
+          <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+            {infillBanner}
+          </p>
+        ) : null}
         <div className="space-y-3">
           {stops.map((stop) => {
             const isAccepted = acceptedStops.has(stop.lsoa_code);

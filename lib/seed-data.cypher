@@ -1,3 +1,4 @@
+// Optional: run `lib/schema.cypher` once on a fresh database for constraints and indexes.
 // Markets
 CREATE (m1:Market {id: 'mkt_banbury', name: 'Banbury Market', town: 'Banbury', day_of_week: 'thursday', lat: 52.0629, lng: -1.3398})
 CREATE (m2:Market {id: 'mkt_witney', name: 'Witney Market', town: 'Witney', day_of_week: 'friday', lat: 51.7842, lng: -1.4853})

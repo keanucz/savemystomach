@@ -37,6 +37,7 @@ interface LookupResult {
   lat: number;
   lng: number;
   upcoming_stops: TraderStop[];
+  demo?: boolean;
 }
 
 type ViewState =
@@ -48,6 +49,7 @@ type ViewState =
       stop: TraderStop;
       items: Record<string, number>;
       orderId: string;
+      orderDemo?: boolean;
     };
 
 function formatPrice(pence: number): string {
@@ -72,18 +74,34 @@ export default function ResidentPage() {
   const [view, setView] = useState<ViewState>({ step: "postcode" });
   const [postcode, setPostcode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   async function handleLookup(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setLookupError(null);
     try {
       const res = await fetch("/api/resident/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ postcode }),
       });
-      const data: LookupResult = await res.json();
+      const data: LookupResult & { error?: string; demo?: boolean } =
+        await res.json();
+      if (!res.ok || data.error) {
+        setLookupError(
+          typeof data.error === "string"
+            ? data.error
+            : "Something went wrong. Please try again."
+        );
+        return;
+      }
+      if (!data.lsoa_code || !Array.isArray(data.upcoming_stops)) {
+        setLookupError("Unexpected response from server.");
+        return;
+      }
       setView({ step: "stops", data });
     } finally {
       setLoading(false);
@@ -91,6 +109,7 @@ export default function ResidentPage() {
   }
 
   function handleSelectStop(data: LookupResult, stop: TraderStop) {
+    setOrderError(null);
     const initial: Record<string, number> = {};
     for (const p of stop.available_products) {
       initial[p.sku] = 0;
@@ -114,23 +133,35 @@ export default function ResidentPage() {
     if (items.length === 0) return;
 
     setLoading(true);
+    setOrderError(null);
     try {
       const res = await fetch("/api/resident/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          postcode: postcode.trim().toUpperCase() || undefined,
           trader_id: stop.trader_id,
           lsoa_code: lsoaCode,
           scheduled_time: stop.scheduled_time,
           items,
         }),
       });
-      const result = await res.json();
+      const result: { order_id?: string; error?: string; demo?: boolean } =
+        await res.json();
+      if (!res.ok || result.error || !result.order_id) {
+        setOrderError(
+          typeof result.error === "string"
+            ? result.error
+            : "Could not place order. Please try again."
+        );
+        return;
+      }
       setView({
         step: "confirmed",
         stop,
         items: quantities,
         orderId: result.order_id,
+        orderDemo: result.demo === true,
       });
     } finally {
       setLoading(false);
@@ -168,6 +199,11 @@ export default function ResidentPage() {
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? "Searching..." : "Find food near me"}
                 </Button>
+                {lookupError ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {lookupError}
+                  </p>
+                ) : null}
               </form>
             </CardContent>
           </Card>
@@ -192,6 +228,12 @@ export default function ResidentPage() {
                 })),
               ]}
             />
+
+            {view.data.demo && (
+              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                Demo data: the live postcode lookup is unavailable.
+              </p>
+            )}
 
             <h2 className="text-lg font-semibold">Upcoming trader stops</h2>
 
@@ -300,6 +342,11 @@ export default function ResidentPage() {
                     ? "Placing order..."
                     : `Place order — ${formatPrice(calculateTotal(view.stop.available_products))}`}
                 </Button>
+                {orderError ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {orderError}
+                  </p>
+                ) : null}
               </CardContent>
             </Card>
           </div>
@@ -315,7 +362,14 @@ export default function ResidentPage() {
                   aria-hidden="true"
                 />
                 <CardTitle className="text-xl">Order confirmed</CardTitle>
-                <CardDescription>Order ID: {view.orderId}</CardDescription>
+                <CardDescription>
+                  Order ID: {view.orderId}
+                  {view.orderDemo && (
+                    <span className="mt-1 block text-amber-700 dark:text-amber-400">
+                      Demo order (not saved to the live database).
+                    </span>
+                  )}
+                </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col items-center gap-4 text-center">
                 <p className="text-2xl font-bold">

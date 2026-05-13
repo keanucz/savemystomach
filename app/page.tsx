@@ -6,7 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function Home() {
   return (
@@ -26,17 +27,21 @@ export default function Home() {
               <CardDescription>How would you like to use SaveMyStomach?</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              <Button size="lg" className="w-full" render={<Link href="/resident" />}>
+              <Link
+                href="/resident"
+                className={cn(buttonVariants({ size: "lg" }), "w-full")}
+              >
                 I&apos;m a resident
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full"
-                render={<Link href="/trader" />}
+              </Link>
+              <Link
+                href="/trader"
+                className={cn(
+                  buttonVariants({ size: "lg", variant: "outline" }),
+                  "w-full"
+                )}
               >
                 I&apos;m a trader
-              </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>

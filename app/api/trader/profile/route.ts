@@ -1,17 +1,36 @@
-import { query } from '@/lib/neo4j';
-import { TRADER_PROFILE_QUERY } from '@/lib/cypher';
+import { getTraderProfile } from '@/lib/trader-profile';
+import { isDemoFallbackAllowed } from '@/lib/demo-fallback';
+import { logApiEvent, truncateId } from '@/lib/api-log';
+
+const ROUTE = 'GET /api/trader/profile';
 
 export async function GET(req: Request) {
+  const started = performance.now();
   const { searchParams } = new URL(req.url);
   const traderId = searchParams.get('traderId') || 'trader_001';
 
   try {
-    const results = await query(TRADER_PROFILE_QUERY, { traderId });
-    if (results.length === 0) {
+    const row = await getTraderProfile(traderId);
+    if (!row) {
       return Response.json({ error: 'Trader not found' }, { status: 404 });
     }
-    return Response.json(results[0]);
-  } catch {
+    return Response.json(row);
+  } catch (err) {
+    const duration_ms = Math.round(performance.now() - started);
+    logApiEvent('error', ROUTE, 'profile query failed', {
+      duration_ms,
+      trader_id: truncateId(traderId),
+      error_name: err instanceof Error ? err.name : 'Error',
+      error_message: err instanceof Error ? err.message : String(err),
+    });
+
+    if (!isDemoFallbackAllowed()) {
+      return Response.json(
+        { error: 'Service temporarily unavailable' },
+        { status: 503 }
+      );
+    }
+
     return Response.json({
       name: 'James Whitaker',
       business: 'Cotswold Fruit & Veg',
@@ -36,6 +55,7 @@ export async function GET(req: Request) {
         { sku: 'potato', name: 'Potatoes', price_pence: 200, unit: 'kg' },
         { sku: 'carrot', name: 'Carrots', price_pence: 150, unit: 'kg' },
       ],
+      demo: true,
     });
   }
 }
