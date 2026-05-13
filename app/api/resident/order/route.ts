@@ -3,14 +3,16 @@ import { PLACE_ORDER_MUTATION } from '@/lib/cypher';
 
 export async function POST(req: Request) {
   const body = await req.json();
+  const postcode = (body.postcode || 'E2 6BG').trim().toUpperCase();
 
   try {
     await query(PLACE_ORDER_MUTATION, {
-      postcode: body.postcode || 'E2 6BG',
+      postcode,
       items: body.items,
     });
-  } catch {
-    // Continue even if Neo4j unavailable
+  } catch (err) {
+    console.error('Order write failed:', err);
+    return Response.json({ error: 'Could not place order' }, { status: 500 });
   }
 
   return Response.json({

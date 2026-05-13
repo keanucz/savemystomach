@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,24 +28,27 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <header className="border-b border-border/60 bg-card/80 backdrop-blur-sm">
-          <nav
-            className="mx-auto flex h-14 max-w-2xl items-center px-4"
-            aria-label="Main navigation"
-          >
-            <Link
-              href="/"
-              className="text-base font-semibold tracking-tight text-foreground transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        <ThemeProvider>
+          <header className="border-b border-border/60 bg-card/80 backdrop-blur-sm">
+            <nav
+              className="mx-auto flex h-14 max-w-2xl items-center px-4"
+              aria-label="Main navigation"
             >
-              SaveMyStomach
-            </Link>
-          </nav>
-        </header>
-        <div className="flex flex-1 flex-col">{children}</div>
-        <Toaster />
+              <Link
+                href="/"
+                className="text-base font-semibold tracking-tight text-foreground transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                SaveMyStomach
+              </Link>
+            </nav>
+          </header>
+          <div className="flex flex-1 flex-col">{children}</div>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

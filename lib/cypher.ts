@@ -44,11 +44,13 @@ export const RESIDENT_LOOKUP_QUERY = `
 MATCH (r:Resident {postcode: $postcode})-[:LIVES_IN]->(l:LSOA)
 OPTIONAL MATCH (t:Trader)-[s:CONFIRMED_STOP]->(l)
 WHERE s.date >= date() OR s.date IS NULL
+WITH l, t, s
+WHERE t IS NOT NULL
 OPTIONAL MATCH (t)-[:SUPPLIES]->(p:Product)
 WITH l, t, s, collect(DISTINCT {sku: p.sku, name: p.name, price_pence: p.price_pence, unit: p.unit}) AS products
 RETURN l.code AS lsoa_code, l.name AS lsoa_name, l.borough AS borough,
        l.lat AS lat, l.lng AS lng,
-       collect(DISTINCT {
+       collect({
          trader_id: t.id,
          trader_name: t.business,
          scheduled_time: s.scheduled_time,

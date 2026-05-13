@@ -35,7 +35,7 @@ export default function Home() {
           </Button>
         </div>
 
-        <div
+        <section
           className="flex flex-col gap-6 border-t border-border/60 pt-8 sm:flex-row sm:gap-10"
           aria-label="How it works"
         >
@@ -63,7 +63,7 @@ export default function Home() {
               Your order is ready when the van arrives.
             </span>
           </div>
-        </div>
+        </section>
       </div>
     </main>
   );
