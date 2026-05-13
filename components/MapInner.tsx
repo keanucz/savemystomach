@@ -18,25 +18,25 @@ interface MapInnerProps {
 }
 
 const MARKER_COLORS: Record<MarkerData["type"], string> = {
-  resident: "#2dd4bf", // teal
-  stop: "#f97066", // coral
-  market: "#9ca3af", // gray
+  resident: "#166534",
+  stop: "#f97316",
+  market: "#6b7280",
 };
 
-function createIcon(type: MarkerData["type"]) {
+function createIcon(type: MarkerData["type"]): L.DivIcon {
   const color = MARKER_COLORS[type];
   return L.divIcon({
     html: `<div style="
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
       border-radius: 50%;
       background: ${color};
-      border: 2px solid white;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      border: 2.5px solid white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
     "></div>`,
     className: "",
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
   });
 }
 
