@@ -12,8 +12,39 @@ services:
     ports:
       - "8910:3000"
     environment:
-      NEO4J_URI: ${SAVEMYSTOMACH_NEO4J_URI}
-      NEO4J_USER: ${SAVEMYSTOMACH_NEO4J_USER}
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
       NEO4J_PASSWORD: ${SAVEMYSTOMACH_NEO4J_PASSWORD}
       KIMCHI_BASE_URL: ${SAVEMYSTOMACH_KIMCHI_BASE_URL}
       KIMCHI_API_KEY: ${SAVEMYSTOMACH_KIMCHI_API_KEY}
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    networks:
+      - savemystomach
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: savemystomach-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/${SAVEMYSTOMACH_NEO4J_PASSWORD}
+      NEO4J_PLUGINS: '["apoc"]'
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p $NEO4J_AUTH_PASSWORD 'RETURN 1' || wget -q --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - savemystomach
+
+volumes:
+  neo4j_data:
+
+networks:
+  savemystomach:
+    name: savemystomach
+    driver: bridge
