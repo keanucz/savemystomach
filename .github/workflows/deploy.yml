@@ -41,20 +41,3 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    env:
-      KOMODO_API_KEY: ${{ secrets.KOMODO_API_KEY }}
-      KOMODO_API_SECRET: ${{ secrets.KOMODO_API_SECRET }}
-      KOMODO_API_URL: ${{ secrets.KOMODO_API_URL }}
-    steps:
-      - name: Trigger Komodo redeploy
-        run: |
-          curl -s -X POST \
-            -H "x-api-key: $KOMODO_API_KEY" \
-            -H "x-api-secret: $KOMODO_API_SECRET" \
-            -H "Content-Type: application/json" \
-            -d '{"type": "DeployStack", "params": {"stack": "savemystomach"}}' \
-            "$KOMODO_API_URL/execute"
