@@ -401,7 +401,8 @@ export default function ResidentPage() {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Button
-                            size="icon-sm"
+                            size="icon"
+                            className="h-8 w-8 text-sm"
                             variant="outline"
                             onClick={() => updateQuantity(product.sku, -1)}
                             disabled={qty === 0}
@@ -417,7 +418,8 @@ export default function ResidentPage() {
                             {qty}
                           </span>
                           <Button
-                            size="icon-sm"
+                            size="icon"
+                            className="h-8 w-8 text-sm"
                             variant="outline"
                             onClick={() => updateQuantity(product.sku, 1)}
                             aria-label={`Add one ${product.name}`}
@@ -496,10 +498,7 @@ export default function ResidentPage() {
                       Order confirmed
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      Reference:{" "}
-                      <span className="font-mono text-xs">
-                        {view.orderId}
-                      </span>
+                      Ref: <span className="font-medium tabular-nums text-foreground">{view.orderId}</span>
                     </p>
                   </div>
                 </div>
@@ -551,6 +550,14 @@ export default function ResidentPage() {
                         {formatPrice(confirmedTotal)}
                       </span>
                     </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="py-4">
+                    <p className="text-sm text-foreground/80">
+                      Your items will be set aside by the trader. Just give your name when the van arrives — no app needed on the day.
+                    </p>
                   </CardContent>
                 </Card>
 
