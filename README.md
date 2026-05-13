@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SaveMyStomach
 
-## Getting Started
+Fresh food delivered to forgotten neighbourhoods.
 
-First, run the development server:
+A platform connecting UK food desert residents with mobile market traders. We pre-aggregate resident demand so traders can profitably add food desert stops along their existing weekly market circuits.
+
+## How it works
+
+1. **Residents** enter their postcode, see upcoming trader stops on a map, and pre-order fresh produce
+2. **Traders** see aggregated demand from food desert areas, ranked by revenue potential
+3. When a trader **accepts a stop**, residents immediately see it — the graph database IS the source of truth
+
+## Tech stack
+
+- **Next.js 16** — App Router, TypeScript, TailwindCSS, shadcn/ui
+- **Neo4j 5** — Graph database modelling traders, markets, residents, products, and their relationships
+- **OpenAI API** — Trader assistant chat (via configurable gateway)
+- **React-Leaflet** — OpenStreetMap-based mapping
+- **Docker** — Multi-container deployment (web + Neo4j)
+
+## Running locally
 
 ```bash
+npm install
+cp .env.example .env.local
+# Fill in NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, KIMCHI_BASE_URL, KIMCHI_API_KEY
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+To run with Docker (includes Neo4j):
+```bash
+docker compose up -d
+# Seed the database:
+cat lib/seed-data.cypher | docker exec -i savemystomach-neo4j cypher-shell -u neo4j -p <password>
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Pushes to `master` trigger GitHub Actions which builds and pushes a Docker image to GHCR. Komodo auto-pulls the new image on the homelab server.
 
-## Learn More
+Live at: **savemystomach.keanuc.net**
 
-To learn more about Next.js, take a look at the following resources:
+## Project structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+app/
+├── page.tsx                  # Landing page
+├── resident/page.tsx         # Resident flow (postcode → map → order → confirm)
+├── trader/page.tsx           # Trader dashboard (infill stops, chat)
+└── api/
+    ├── resident/lookup/      # Postcode → LSOA + upcoming stops (Neo4j)
+    ├── resident/order/       # Place order (writes to Neo4j)
+    ├── trader/profile/       # Trader info + circuit (Neo4j)
+    ├── trader/infill/        # Demand-ranked infill stops (Neo4j)
+    ├── trader/accept-stop/   # Confirm a stop (Neo4j write)
+    └── trader/chat/          # LLM assistant
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+lib/
+├── neo4j.ts                  # Driver + query helper (auto-converts Neo4j Integers)
+├── cypher.ts                 # All Cypher queries
+├── kimchi.ts                 # LLM gateway (OpenAI SDK)
+└── seed-data.cypher          # Full graph seed script
+```
 
-## Deploy on Vercel
+## Graph model
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+(:Trader)-[:ATTENDS]->(:Market)
+(:Trader)-[:SUPPLIES]->(:Product)
+(:Trader)-[:CONFIRMED_STOP]->(:LSOA)
+(:Resident)-[:LIVES_IN]->(:LSOA)
+(:Resident)-[:ORDERED]->(:Product)
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Demo postcodes
+
+- `E2 6BG` — Tower Hamlets (primary demo LSOA, 3 residents, ~£340 demand)
+- Any other postcode falls back to the Tower Hamlets demo data
+
+## Team
+
+Built at TESSL Night hackathon, May 2026.

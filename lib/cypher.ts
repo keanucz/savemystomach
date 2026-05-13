@@ -1,31 +1,21 @@
 export const INFILL_STOPS_QUERY = `
-MATCH (t:Trader {id: $traderId})-[:ATTENDS]->(m1:Market)
-MATCH (t)-[:ATTENDS]->(m2:Market)
-WHERE m1.day_of_week = m2.day_of_week AND m1.id < m2.id
+MATCH (t:Trader {id: $traderId})-[:ATTENDS]->(m:Market)
 MATCH (l:LSOA {is_food_desert: true})
-WHERE point.distance(
-        point({latitude: m1.lat, longitude: m1.lng}),
-        point({latitude: l.lat, longitude: l.lng})
-      ) +
-      point.distance(
-        point({latitude: l.lat, longitude: l.lng}),
-        point({latitude: m2.lat, longitude: m2.lng})
-      ) <
-      point.distance(
-        point({latitude: m1.lat, longitude: m1.lng}),
-        point({latitude: m2.lat, longitude: m2.lng})
-      ) * 1.5
 MATCH (r:Resident)-[:LIVES_IN]->(l)
 MATCH (r)-[o:ORDERED {status: 'pending'}]->(p:Product)
 MATCH (t)-[:SUPPLIES]->(p)
-WITH l, m1, m2, sum(o.qty * o.price_pence) AS demand_pence, count(DISTINCT r) AS residents
-WHERE demand_pence > 5000
+WITH l, collect(DISTINCT m.name)[0] AS nearest_market,
+     collect(DISTINCT m.day_of_week)[0] AS day,
+     sum(o.qty * o.price_pence) AS demand_pence,
+     count(DISTINCT r) AS residents
+WHERE demand_pence > 2000
 RETURN l.name AS lsoa_name, l.code AS lsoa_code, l.borough AS borough,
        l.lat AS lat, l.lng AS lng,
        demand_pence / 100 AS demand_gbp,
        residents,
-       m1.name AS market_a, m2.name AS market_b,
-       m1.day_of_week AS day
+       nearest_market AS market_a,
+       nearest_market AS market_b,
+       day
 ORDER BY demand_pence DESC
 LIMIT 5
 `;

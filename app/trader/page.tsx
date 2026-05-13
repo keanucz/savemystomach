@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import Map from '@/components/Map';
 
 const TRADER_ID = 'trader_001';
 
@@ -48,13 +49,6 @@ interface InfillStop {
   day: string;
 }
 
-interface StockItem {
-  sku: string;
-  name: string;
-  estimated_qty: number;
-  unit: string;
-}
-
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -64,26 +58,11 @@ function formatDay(day: string): string {
   return day.charAt(0).toUpperCase() + day.slice(1, 3);
 }
 
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(',')[1]);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 export default function TraderPage() {
   const [profile, setProfile] = useState<TraderProfile | null>(null);
   const [stops, setStops] = useState<InfillStop[]>([]);
   const [acceptedStops, setAcceptedStops] = useState<Set<string>>(new Set());
   const [acceptingStop, setAcceptingStop] = useState<string | null>(null);
-
-  const [stockItems, setStockItems] = useState<StockItem[]>([]);
-  const [stockLoading, setStockLoading] = useState(false);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -128,31 +107,6 @@ export default function TraderPage() {
     }
   }, []);
 
-  const handleStockUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setStockLoading(true);
-      setStockItems([]);
-      try {
-        const base64 = await fileToBase64(file);
-        const res = await fetch('/api/trader/recognise-stock', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: base64 }),
-        });
-        const data: { items: StockItem[] } = await res.json();
-        setStockItems(data.items);
-        toast.success(`Identified ${data.items.length} items`);
-      } catch {
-        toast.error('Failed to recognise stock. Please try again.');
-      } finally {
-        setStockLoading(false);
-      }
-    },
-    []
-  );
-
   const handleSendMessage = useCallback(
     async (question: string) => {
       if (!question.trim()) return;
@@ -188,184 +142,188 @@ export default function TraderPage() {
 
   if (!profile) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading trader dashboard...</p>
-      </div>
+      <main className="flex flex-1 items-center justify-center">
+        <p className="text-muted-foreground">Loading dashboard...</p>
+      </main>
     );
   }
 
+  const mapMarkers = stops.map((s) => ({
+    lat: s.lat,
+    lng: s.lng,
+    label: `${s.lsoa_name} — £${s.demand_gbp}`,
+    type: 'stop' as const,
+  }));
+
+  const circuitMarkers = profile.circuit.map((c) => ({
+    lat: 0,
+    lng: 0,
+    label: c.market,
+    type: 'market' as const,
+  }));
+
   return (
-    <div className="mx-auto max-w-md space-y-6 p-4 pb-8">
-      {/* Header card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">{profile.name}</CardTitle>
-          <CardDescription>{profile.business}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {profile.circuit.map((stop) => (
-              <Badge key={`${stop.market}-${stop.day}`} variant="secondary">
-                {stop.town} {formatDay(stop.day)}
-              </Badge>
-            ))}
+    <main className="flex flex-1 flex-col items-center px-4 py-6 sm:py-10">
+      <div className="w-full max-w-lg space-y-6">
+        {/* Header */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">{profile.business}</CardTitle>
+            <CardDescription>{profile.name}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {profile.circuit.map((stop) => (
+                <Badge key={`${stop.market}-${stop.day}`} variant="secondary">
+                  {stop.town} {formatDay(stop.day)}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Map */}
+        {stops.length > 0 && (
+          <Map
+            center={[stops[0].lat, stops[0].lng]}
+            markers={mapMarkers}
+            zoom={10}
+          />
+        )}
+
+        {/* Infill stops */}
+        <section>
+          <h2 className="mb-3 text-lg font-semibold">
+            Profitable detours along your route
+          </h2>
+          {stops.length === 0 && (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <p className="text-muted-foreground">
+                  No demand signals yet. Check back as residents place orders.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+          <div className="space-y-3">
+            {stops.map((stop) => {
+              const isAccepted = acceptedStops.has(stop.lsoa_code);
+              const isAccepting = acceptingStop === stop.lsoa_code;
+              return (
+                <Card
+                  key={stop.lsoa_code}
+                  className={isAccepted ? 'opacity-60' : ''}
+                >
+                  <CardHeader>
+                    <CardTitle className="text-base">
+                      {stop.lsoa_name}{' '}
+                      <span className="font-normal text-muted-foreground">
+                        &middot; {stop.borough}
+                      </span>
+                    </CardTitle>
+                    {isAccepted && (
+                      <Badge variant="secondary">Confirmed &#10003;</Badge>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <p className="text-2xl font-bold">
+                      &pound;{stop.demand_gbp}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {stop.residents} resident{stop.residents !== 1 ? 's' : ''}{' '}
+                      &middot; near {stop.market_a} &middot; {stop.day}
+                    </p>
+                    <Button
+                      size="lg"
+                      className="h-12 w-full text-base"
+                      disabled={isAccepted || isAccepting}
+                      onClick={() => handleAcceptStop(stop)}
+                    >
+                      {isAccepting
+                        ? 'Accepting...'
+                        : isAccepted
+                          ? 'Accepted'
+                          : 'Accept stop'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        </CardContent>
-      </Card>
+        </section>
 
-      {/* Infill stops */}
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">
-          Profitable detours along your route
-        </h2>
-        <div className="space-y-3">
-          {stops.map((stop) => {
-            const isAccepted = acceptedStops.has(stop.lsoa_code);
-            const isAccepting = acceptingStop === stop.lsoa_code;
-            return (
-              <Card
-                key={stop.lsoa_code}
-                className={isAccepted ? 'opacity-60' : ''}
-              >
-                <CardHeader>
-                  <CardTitle>
-                    {stop.lsoa_name}{' '}
-                    <span className="font-normal text-muted-foreground">
-                      &middot; {stop.borough}
-                    </span>
-                  </CardTitle>
-                  {isAccepted && (
-                    <Badge variant="secondary">Confirmed &#10003;</Badge>
+        {/* Chat */}
+        <section>
+          <h2 className="mb-3 text-lg font-semibold">Ask SaveMyStomach</h2>
+          <Card>
+            <CardContent className="space-y-3 pt-4">
+              {messages.length === 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    "What's my best stop this week?",
+                    'Which products should I bring more of?',
+                    'How much demand is there in Tower Hamlets?',
+                  ].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      className="rounded-full border border-border px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                      onClick={() => handleSendMessage(chip)}
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {messages.length > 0 && (
+                <div className="max-h-64 space-y-2 overflow-y-auto">
+                  {messages.map((msg, i) => (
+                    <div
+                      key={i}
+                      className={`rounded-lg px-3 py-2 text-sm ${
+                        msg.role === 'user'
+                          ? 'ml-auto max-w-[80%] bg-primary/10 text-right'
+                          : 'mr-auto max-w-[80%] bg-muted text-left'
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="mr-auto max-w-[80%] rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+                      Thinking...
+                    </div>
                   )}
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-2xl font-bold">
-                    &pound;{stop.demand_gbp}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {stop.residents} resident{stop.residents !== 1 ? 's' : ''}{' '}
-                    &middot; between {stop.market_a} and {stop.market_b} &middot;{' '}
-                    {stop.day}
-                  </p>
-                  <Button
-                    size="lg"
-                    className="w-full"
-                    disabled={isAccepted || isAccepting}
-                    onClick={() => handleAcceptStop(stop)}
-                  >
-                    {isAccepting
-                      ? 'Accepting...'
-                      : isAccepted
-                        ? 'Accepted'
-                        : 'Accept stop'}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
+                </div>
+              )}
 
-      {/* Stock recognition */}
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Update your stock</h2>
-        <Card>
-          <CardContent className="space-y-3">
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handleStockUpload}
-              aria-label="Upload stock image"
-            />
-            {stockLoading && (
-              <p className="text-sm text-muted-foreground">
-                Identifying produce...
-              </p>
-            )}
-            {stockItems.length > 0 && (
-              <ul className="space-y-1">
-                {stockItems.map((item) => (
-                  <li key={item.sku} className="flex items-center gap-2 text-sm">
-                    <span className="text-green-600">&#10003;</span>
-                    <span>
-                      {item.name} &mdash; {item.estimated_qty} {item.unit}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Chat section */}
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Ask SaveMyStomach</h2>
-        <Card>
-          <CardContent className="space-y-3">
-            {/* Suggestion chips */}
-            {messages.length === 0 && (
-              <div className="flex flex-wrap gap-2">
-                {[
-                  "What's my best stop this week?",
-                  'Which products should I bring more of?',
-                ].map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    className="rounded-full border border-border bg-secondary px-3 py-1 text-xs text-secondary-foreground transition-colors hover:bg-muted"
-                    onClick={() => handleSendMessage(chip)}
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Messages */}
-            {messages.length > 0 && (
-              <div className="max-h-64 space-y-2 overflow-y-auto">
-                {messages.map((msg, i) => (
-                  <div
-                    key={i}
-                    className={`rounded-lg px-3 py-2 text-sm ${
-                      msg.role === 'user'
-                        ? 'ml-auto max-w-[80%] bg-blue-100 text-right'
-                        : 'mr-auto max-w-[80%] bg-gray-100 text-left'
-                    }`}
-                  >
-                    {msg.content}
-                  </div>
-                ))}
-                {chatLoading && (
-                  <div className="mr-auto max-w-[80%] rounded-lg bg-gray-100 px-3 py-2 text-sm text-muted-foreground">
-                    Thinking...
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Input */}
-            <form
-              className="flex gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendMessage(chatInput);
-              }}
-            >
-              <Input
-                placeholder="Ask a question..."
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                aria-label="Chat message"
-              />
-              <Button type="submit" disabled={chatLoading || !chatInput.trim()}>
-                Send
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </section>
-    </div>
+              <form
+                className="flex gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendMessage(chatInput);
+                }}
+              >
+                <Input
+                  placeholder="Ask a question..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  className="h-11"
+                  aria-label="Chat message"
+                />
+                <Button
+                  type="submit"
+                  className="h-11"
+                  disabled={chatLoading || !chatInput.trim()}
+                >
+                  Send
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+    </main>
   );
 }
